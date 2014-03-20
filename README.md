@@ -1,4 +1,4 @@
-wafflehaus-nova
-===============
+wafflehaus.nova
+==================
 
 Wafflehaus modules specific to nova

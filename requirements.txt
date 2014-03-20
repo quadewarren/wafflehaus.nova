@@ -1,0 +1,4 @@
+dnspython
+webob
+-e git+https://github.com/openstack/nova.git#egg=nova
+-e git+https://github.com/roaet/wafflehaus.git@development#egg=wafflehaus
