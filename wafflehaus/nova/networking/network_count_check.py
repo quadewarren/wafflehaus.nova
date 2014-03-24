@@ -17,15 +17,12 @@ import logging
 import webob.dec
 from webob import exc
 
+from wafflehaus.nova.networking import networking_base as net_base
+
 from nova.api.openstack.compute import servers
-from nova.api.openstack import wsgi
-from nova import compute
 from nova.compute import utils as compute_utils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
-from nova import wsgi as base_wsgi
-
-log = logging.getLogger('nova.' + __name__)
 
 
 def _get_body(request, json_property, xml_deserializer):
@@ -35,7 +32,6 @@ def _get_body(request, json_property, xml_deserializer):
     else:
         body = jsonutils.loads(request.body)
         body = body[json_property]
-
     return body
 
 
@@ -45,7 +41,8 @@ def check_required_networks(networks, required_networks):
         msg = "Networks (%s) required but missing"
         msg_networks = ",".join(required_networks)
         if required_networks.intersection(networks) != required_networks:
-            raise exc.HTTPForbidden(msg % msg_networks)
+            return msg % msg_networks
+    return ""
 
 
 def check_banned_networks(networks, banned_networks):
@@ -54,7 +51,8 @@ def check_banned_networks(networks, banned_networks):
         msg = "Networks (%s) not allowed"
         msg_networks = ",".join(banned_networks)
         if banned_networks.intersection(networks) != set():
-            raise exc.HTTPForbidden(msg % msg_networks)
+            return msg % msg_networks
+    return ""
 
 
 def check_network_count(networks, min_nets, max_nets, existing_nets,
@@ -74,14 +72,14 @@ def check_network_count(networks, min_nets, max_nets, existing_nets,
         isolated_nets = networks | existing_nets
     else:
         isolated_nets = networks
+
     if not count_optional_nets:
         isolated_nets = isolated_nets - optional_nets
 
     if ((min_nets and len(isolated_nets) < min_nets) or
             len(isolated_nets) > max_nets):
-        raise exc.HTTPForbidden(msg % msg_network_count)
-
-    return True
+        return msg % msg_network_count
+    return ""
 
 
 class NetworkCountConfig(object):
@@ -103,9 +101,10 @@ class NetworkCountConfig(object):
 
 class BootNetworkCountCheck(object):
     """Verifies networks on server boot."""
-    def __init__(self, check_config):
+    def __init__(self, check_config, log):
         self.check_config = check_config
         self.xml_deserializer = servers.CreateDeserializer()
+        self.log = log
 
     @staticmethod
     def _is_server_boot_request(pathparts, req, projectid):
@@ -115,7 +114,7 @@ class BootNetworkCountCheck(object):
         if pathparts != bootcheck:
             return False
         if not req.body or len(req.body) == 0:
-            raise exc.HTTPUnprocessableEntity("Body is missing")
+            return False
         return True
 
     @staticmethod
@@ -140,20 +139,25 @@ class BootNetworkCountCheck(object):
         cfg = self.check_config
         networks = self._get_networks_from_request(req)
 
-        check_required_networks(networks, cfg.required_networks)
-        check_banned_networks(networks, cfg.banned_networks)
-        check_network_count(networks, cfg.networks_min, cfg.networks_max,
-                            None, cfg.optional_networks,
-                            cfg.count_optional_nets)
-        return True
+        msg = check_required_networks(networks, cfg.required_networks)
+        if msg:
+            return msg
+        msg = check_banned_networks(networks, cfg.banned_networks)
+        if msg:
+            return msg
+        return check_network_count(networks, cfg.networks_min,
+                                   cfg.networks_max,
+                                   None, cfg.optional_networks,
+                                   cfg.count_optional_nets)
 
 
 class AttachNetworkCountCheck(object):
     """Verifies networks on network/vif attach request."""
-    def __init__(self, check_config):
+    def __init__(self, check_config, log, get_instance):
         self.check_config = check_config
-        self.compute_api = compute.API()
         self.xml_deserializer = servers.CreateDeserializer()
+        self.log = log
+        self.get_instance = get_instance
 
     @staticmethod
     def _is_attach_network_request(pathparts, projectid):
@@ -170,7 +174,7 @@ class AttachNetworkCountCheck(object):
 
     def _get_existing_networks(self, context, server_id):
         """Returns networks a server is already connected to."""
-        instance = self.compute_api.get(context, server_id)
+        instance = self.get_instance(context, server_id)
         nw_info = compute_utils.get_nw_info_for_instance(instance)
 
         networks = []
@@ -184,63 +188,82 @@ class AttachNetworkCountCheck(object):
     def _get_attaching_network(self, request):
         """Extract network to be added from request."""
         if not request.body or len(request.body) == 0:
-            raise exc.HTTPUnprocessableEntity("Body is missing")
+            return None
         body = _get_body(request, "virtual_interface", self.xml_deserializer)
-        if body and body['network_id']:
-            return body['network_id']
-        return ''
+        if not body or 'network_id' not in body:
+            return None
+        return body['network_id']
 
     def check_networks(self, context, request, server_id):
         """Checks banned/count of networks."""
         cfg = self.check_config
-        existing_networks = self._get_existing_networks(context, server_id)
         networks = set([self._get_attaching_network(request)])
+        if None in networks:
+            networks.remove(None)
+        if not len(networks):
+            return ''
+        existing_networks = self._get_existing_networks(context, server_id)
 
         # Note: don't need to check required nets on attach
         # Min as 0 since only attach 1 at a time; in case 2 or more under min
-        check_banned_networks(networks, cfg.banned_networks)
-        check_network_count(networks, None, cfg.networks_max,
-                            existing_networks, cfg.optional_networks,
-                            cfg.count_optional_nets)
+        msg = check_banned_networks(networks, cfg.banned_networks)
+        if msg:
+            return msg
+        return check_network_count(networks, None, cfg.networks_max,
+                                   existing_networks, cfg.optional_networks,
+                                   cfg.count_optional_nets)
 
 
-class NetworkCountCheck(base_wsgi.Middleware):
+class NetworkCountCheck(net_base.WafflehausNovaNetworking):
     """NetworkCountCheck middleware ensures certain networks are not
     attached and that a the network count doesn't exceed a maximum
     """
 
-    def __init__(self, application, **local_config):
-        super(NetworkCountCheck, self).__init__(application)
-        self.check_config = NetworkCountConfig(local_config)
+    def __init__(self, application, conf):
+        super(NetworkCountCheck, self).__init__(application, conf)
+        logname = __name__
+        self.log = logging.getLogger(conf.get('log_name', logname))
+        self.log.info('Starting wafflehaus network count check middleware')
+        self.check_config = NetworkCountConfig(conf)
 
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    @webob.dec.wsgify
     def __call__(self, req, **local_config):
         verb = req.method
         if verb != "POST":
             return self.application
 
-        context = req.environ.get("nova.context")
+        context = self._get_context(req)
         if not context:
-            log.info("No context found")
             return self.application
 
         projectid = context.project_id
         path = req.environ.get("PATH_INFO")
         if path is None:
-            raise exc.HTTPUnprocessableEntity("Path is missing")
+            return self.application
 
         pathparts = [part for part in path.split("/") if part]
+        msg = ""
         if AttachNetworkCountCheck.\
                 _is_attach_network_request(pathparts, projectid):
-            check = AttachNetworkCountCheck(self.check_config)
-            check.check_networks(context, req, pathparts[2])
-            return self.application
+            check = AttachNetworkCountCheck(self.check_config, self.log,
+                                            self._get_instance)
+            msg = check.check_networks(context, req, pathparts[2])
         elif BootNetworkCountCheck.\
                 _is_server_boot_request(pathparts, req, projectid):
-            check = BootNetworkCountCheck(self.check_config)
-            check.check_networks(req)
-            return self.application
-        else:
-            return self.application
+            check = BootNetworkCountCheck(self.check_config, self.log)
+            msg = check.check_networks(req)
+        if msg:
+            return exc.HTTPForbidden(msg)
 
         return self.application
+
+
+def filter_factory(global_conf, **local_conf):
+    """Returns a WSGI filter app for use with paste.deploy."""
+    conf = global_conf.copy()
+    conf.update(local_conf)
+
+    def net_count_check(app):
+        """Returns the app for paste.deploy."""
+        return NetworkCountCheck(app, conf)
+    return net_count_check

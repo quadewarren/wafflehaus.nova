@@ -13,19 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import logging
-
 import webob.dec
-from webob import exc
+import webob.exc
+
+from wafflehaus.nova.networking import networking_base as net_base
 
 from nova.api.openstack.compute import servers
-from nova.api.openstack import wsgi
-from nova import compute
 from nova.compute import utils as compute_utils
 from nova.openstack.common import uuidutils
-from nova import wsgi as base_wsgi
-
-
-log = logging.getLogger('nova.' + __name__)
 
 
 def _translate_vif_summary_view(_context, vif):
@@ -37,24 +32,25 @@ def _translate_vif_summary_view(_context, vif):
     return d
 
 
-class DetachNetworkCheck(base_wsgi.Middleware):
+class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
     """DetachNetworkCheck middleware ensures certain networks are not
-    detached
+    detached.
     """
 
-    def __init__(self, application, **local_config):
-        super(DetachNetworkCheck, self).__init__(application)
-        self.compute_api = compute.API()
-        self.required_networks = local_config.get("required_nets", "")
+    def __init__(self, application, conf):
+        super(DetachNetworkCheck, self).__init__(application, conf)
+        logname = __name__
+        self.log = logging.getLogger(conf.get('log_name', logname))
+        self.log.info('Starting wafflehaus detach network check middleware')
+
+        self.required_networks = conf.get('required_nets', '')
         self.required_networks = [n.strip()
                                   for n in self.required_networks.split()]
         self.xml_deserializer = servers.CreateDeserializer()
 
-    def _get_network_info(self, req, server_id, entity_maker):
+    def _get_network_info(self, context, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker"""
-        context = req.environ['nova.context']
-
-        instance = self.compute_api.get(context, server_id)
+        instance = self._get_instance(context, server_id)
         nw_info = compute_utils.get_nw_info_for_instance(instance)
         vifs = []
         for vif in nw_info:
@@ -65,24 +61,24 @@ class DetachNetworkCheck(base_wsgi.Middleware):
                      id=vif["id"],
                      ip_addresses=addr)
             vifs.append(entity_maker(context, v))
-
         return {'virtual_interfaces': vifs}
 
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    @webob.dec.wsgify
     def __call__(self, req, **local_config):
+#TODO(jlh): eventually we will need to make this a wafflehaus supported fx
         verb = req.method
         if verb != "DELETE":
             return self.application
 
-        context = req.environ.get("nova.context")
+        context = self._get_context(req)
         if not context:
-            log.info("No context found")
             return self.application
-
         projectid = context.project_id
+
+#TODO(jlh): shouldn't be using PATH_INFO, but PATH instead
         path = req.environ.get("PATH_INFO")
         if path is None:
-            raise exc.HTTPUnprocessableEntity("Path is missing")
+            return self.application
 
         pathparts = [part for part in path.split("/") if part]
         if len(pathparts) != 5:
@@ -97,10 +93,11 @@ class DetachNetworkCheck(base_wsgi.Middleware):
         if (not uuidutils.is_uuid_like(server_uuid) or
                 not uuidutils.is_uuid_like(vif_uuid)):
             return self.application
+#TODO(jlh): Everything above ^^ is what needs to be one line
 
         #at this point we know it is the correct call
         ent_maker = _translate_vif_summary_view
-        network_info = self._get_network_info(req, server_uuid,
+        network_info = self._get_network_info(context, server_uuid,
                                               entity_maker=ent_maker)
 
         msg = "Network (%s) cannot be detached"
@@ -110,7 +107,18 @@ class DetachNetworkCheck(base_wsgi.Middleware):
                 ip_info = vif['ip_addresses']
                 network_id = ip_info[0]['network_id']
                 if network_id in self.required_networks:
-                    log.info("waffle - attempt to detach required network")
-                    raise exc.HTTPForbidden(msg % network_list)
+                    self.log.info("attempt to detach required network")
+                    return webob.exc.HTTPForbidden(msg % network_list)
 
         return self.application
+
+
+def filter_factory(global_conf, **local_conf):
+    """Returns a WSGI filter app for use with paste.deploy."""
+    conf = global_conf.copy()
+    conf.update(local_conf)
+
+    def detach_network(app):
+        """Returns the app for paste.deploy."""
+        return DetachNetworkCheck(app, conf)
+    return detach_network
