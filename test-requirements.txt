@@ -8,3 +8,4 @@ flake8==2.0
 nose
 unittest2
 hacking
+pyflakes>=0.7.2,<0.7.4
