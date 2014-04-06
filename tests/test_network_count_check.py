@@ -336,6 +336,22 @@ class TestNetworkCountCheck(test_base.TestBase):
         self.assertTrue(isinstance(resp, webob.exc.HTTPForbidden))
         self.assertTrue('be attached' in str(resp))
 
+    def test_boot_suports_no_network_in_body_with_requires(self):
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '0', 'networks_max': '2',
+                'required_nets': self.pubuuid}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(0, result.check_config.networks_min)
+
+        body = '{"server": {}}'
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
+        self.assertEqual(self.app, resp)
+
     def test_boot_suports_no_networks(self):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context

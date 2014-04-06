@@ -121,15 +121,16 @@ class BootNetworkCountCheck(object):
     def _get_networks(body):
         """Extract networks from body."""
         networks = body.get("networks")
-        if not networks:
-            return
+        if networks is None:
+            return None
         return [n["uuid"] for n in networks]
 
     def _get_networks_from_request(self, req):
         """Returns networks given in server boot request."""
         networks = self._get_networks(_get_body(req, "server",
                                                 self.xml_deserializer))
-
+        if networks is None:
+            return None
         if not networks:
             return set()
         return set(networks)
@@ -138,6 +139,8 @@ class BootNetworkCountCheck(object):
         """Checks required/banned/count of networks."""
         cfg = self.check_config
         networks = self._get_networks_from_request(req)
+        if networks is None:
+            return ""
 
         msg = check_required_networks(networks, cfg.required_networks)
         if msg:
