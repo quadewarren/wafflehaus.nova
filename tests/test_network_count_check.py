@@ -78,7 +78,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         result = network_count_check.filter_factory(self.conf)(self.app)
         result.__call__.request('/something', method='POST')
         self.assertEqual(1, m_ctx.call_count)
-        self.assertEqual(self.app, result.application)
+        self.assertEqual(self.app, result.app)
 
     def test_run_on_post(self):
         m_ctx = self.create_patch(self.ctx_path)
@@ -86,16 +86,16 @@ class TestNetworkCountCheck(test_base.TestBase):
         result = network_count_check.filter_factory(self.conf)(self.app)
         result.__call__.request('/something', method='GET')
         self.assertEqual(0, m_ctx.call_count)
-        self.assertEqual(self.app, result.application)
+        self.assertEqual(self.app, result.app)
         result.__call__.request('/something', method='PUT')
         self.assertEqual(0, m_ctx.call_count)
-        self.assertEqual(self.app, result.application)
+        self.assertEqual(self.app, result.app)
         result.__call__.request('/something', method='DELETE')
         self.assertEqual(0, m_ctx.call_count)
-        self.assertEqual(self.app, result.application)
+        self.assertEqual(self.app, result.app)
         result.__call__.request('/something', method='POST')
         self.assertEqual(1, m_ctx.call_count)
-        self.assertEqual(self.app, result.application)
+        self.assertEqual(self.app, result.app)
 
     def test_pathing_properly(self):
         m_ctx = self.create_patch(self.ctx_path)

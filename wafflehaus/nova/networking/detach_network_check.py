@@ -12,7 +12,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import logging
 import webob.dec
 import webob.exc
 
@@ -37,10 +36,9 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
     detached.
     """
 
-    def __init__(self, application, conf):
-        super(DetachNetworkCheck, self).__init__(application, conf)
-        logname = __name__
-        self.log = logging.getLogger(conf.get('log_name', logname))
+    def __init__(self, app, conf):
+        super(DetachNetworkCheck, self).__init__(app, conf)
+        self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus detach network check middleware')
 
         self.required_networks = conf.get('required_nets', '')
@@ -68,31 +66,31 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
 #TODO(jlh): eventually we will need to make this a wafflehaus supported fx
         verb = req.method
         if verb != "DELETE":
-            return self.application
+            return self.app
 
         context = self._get_context(req)
         if not context:
-            return self.application
+            return self.app
         projectid = context.project_id
 
 #TODO(jlh): shouldn't be using PATH_INFO, but PATH instead
         path = req.environ.get("PATH_INFO")
         if path is None:
-            return self.application
+            return self.app
 
         pathparts = [part for part in path.split("/") if part]
         if len(pathparts) != 5:
-            return self.application
+            return self.app
         if (pathparts[0] != projectid or
                 pathparts[1] != "servers" or
                 pathparts[3] != "os-virtual-interfacesv2"):
-            return self.application
+            return self.app
 
         server_uuid = pathparts[2]
         vif_uuid = pathparts[4]
         if (not uuidutils.is_uuid_like(server_uuid) or
                 not uuidutils.is_uuid_like(vif_uuid)):
-            return self.application
+            return self.app
 #TODO(jlh): Everything above ^^ is what needs to be one line
 
         #at this point we know it is the correct call
@@ -110,7 +108,7 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
                     self.log.info("attempt to detach required network")
                     return webob.exc.HTTPForbidden(msg % network_list)
 
-        return self.application
+        return self.app
 
 
 def filter_factory(global_conf, **local_conf):
