@@ -12,8 +12,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import logging
-
 import webob.dec
 from webob import exc
 
@@ -222,10 +220,9 @@ class NetworkCountCheck(net_base.WafflehausNovaNetworking):
     attached and that a the network count doesn't exceed a maximum
     """
 
-    def __init__(self, application, conf):
-        super(NetworkCountCheck, self).__init__(application, conf)
-        logname = __name__
-        self.log = logging.getLogger(conf.get('log_name', logname))
+    def __init__(self, app, conf):
+        super(NetworkCountCheck, self).__init__(app, conf)
+        self.log.name = conf.get('log_name', __name__)
         self.log.info('Starting wafflehaus network count check middleware')
         self.check_config = NetworkCountConfig(conf)
 
@@ -233,16 +230,16 @@ class NetworkCountCheck(net_base.WafflehausNovaNetworking):
     def __call__(self, req, **local_config):
         verb = req.method
         if verb != "POST":
-            return self.application
+            return self.app
 
         context = self._get_context(req)
         if not context:
-            return self.application
+            return self.app
 
         projectid = context.project_id
         path = req.environ.get("PATH_INFO")
         if path is None:
-            return self.application
+            return self.app
 
         pathparts = [part for part in path.split("/") if part]
         msg = ""
@@ -258,7 +255,7 @@ class NetworkCountCheck(net_base.WafflehausNovaNetworking):
         if msg:
             return exc.HTTPForbidden(msg)
 
-        return self.application
+        return self.app
 
 
 def filter_factory(global_conf, **local_conf):

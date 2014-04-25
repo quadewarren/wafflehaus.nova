@@ -15,17 +15,16 @@
 
 from nova import compute
 
+from wafflehaus.base import WafflehausBase
 
-class WafflehausNova(object):
+
+class WafflehausNova(WafflehausBase):
 
     def _get_compute(self):
         return compute
 
     def __init__(self, application, conf):
-        self.application = application
-        self.conf = conf
-        self.testing = (conf.get('testing') in
-                        (True, 'true', 't', '1', 'on', 'yes', 'y'))
+        super(WafflehausNova, self).__init__(application, conf)
         self.compute = self._get_compute()
 
     def _get_context(self, request):
