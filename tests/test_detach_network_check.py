@@ -81,7 +81,7 @@ class TestDetachNetworkCheck(test_base.TestBase):
                           MockedVIFInfo(self.bad_vif_id, self.not_reqnet_id)]
         self.multi_nw2 = [MockedVIFInfo(self.vif_id, self.not_reqnet_id),
                           MockedVIFInfo(self.bad_vif_id, self.not_reqnet_id)]
-        self.conf = {'required_nets': self.reqnet_id}
+        self.conf = {'required_nets': self.reqnet_id, 'enabled': 'true'}
 
     def test_create_filter(self):
         result = detach_network_check.filter_factory(self.conf)(self.app)
