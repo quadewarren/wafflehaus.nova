@@ -63,6 +63,9 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
 
     @webob.dec.wsgify
     def __call__(self, req, **local_config):
+        if not self.enabled:
+            return self.app
+
 #TODO(jlh): eventually we will need to make this a wafflehaus supported fx
         verb = req.method
         if verb != "DELETE":

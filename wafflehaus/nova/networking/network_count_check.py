@@ -228,6 +228,9 @@ class NetworkCountCheck(net_base.WafflehausNovaNetworking):
 
     @webob.dec.wsgify
     def __call__(self, req, **local_config):
+        if not self.enabled:
+            return self.app
+
         verb = req.method
         if verb != "POST":
             return self.app

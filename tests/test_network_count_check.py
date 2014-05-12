@@ -46,7 +46,7 @@ class TestNetworkCountCheck(test_base.TestBase):
 
     def setUp(self):
         self.app = mock.Mock()
-        self.conf = {}
+        self.conf = {'enabled': 'true'}
         self.tenant_id = '123456'
         self.context = FakeContext(self.tenant_id)
         self.vifuuid = '12341234-1234-1234-1234-123412341234'
@@ -170,7 +170,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         net_id = '12345678-1234-1234-1234-123456789012'
         m_get_nwinfo.return_value = [MockedVIFInfo(vif_id, net_id)]
 
-        conf = {'networks_max': '2'}
+        conf = {'networks_max': '2', 'enabled': 'true'}
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(2, result.check_config.networks_max)
 
@@ -196,7 +196,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         net_id2 = '12345678-1234-1234-0000-123456789012'
         m_get_nwinfo.return_value = [MockedVIFInfo(vif_id1, net_id1),
                                      MockedVIFInfo(vif_id2, net_id2)]
-        conf = {'networks_max': '2'}
+        conf = {'networks_max': '2', 'enabled': 'true'}
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(2, result.check_config.networks_max)
 
@@ -219,7 +219,7 @@ class TestNetworkCountCheck(test_base.TestBase):
             'nova.compute.utils.get_nw_info_for_instance')
         m_get_nwinfo.return_value = [MockedVIFInfo(self.vifuuid, self.pubuuid)]
         conf = {'optional_nets': self.pubuuid,
-                'networks_max': '1'}
+                'networks_max': '1', 'enabled': 'true'}
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_max)
         self.assertEqual(1, len(result.check_config.optional_networks))
@@ -243,7 +243,7 @@ class TestNetworkCountCheck(test_base.TestBase):
             'nova.compute.utils.get_nw_info_for_instance')
         m_get_nwinfo.return_value = [MockedVIFInfo(self.vifuuid, self.srvuuid)]
         conf = {'banned_nets': self.pubuuid,
-                'networks_max': '2'}
+                'networks_max': '2', 'enabled': 'true'}
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(2, result.check_config.networks_max)
         self.assertEqual(1, len(result.check_config.banned_networks))
@@ -267,7 +267,7 @@ class TestNetworkCountCheck(test_base.TestBase):
             'nova.compute.utils.get_nw_info_for_instance')
         m_get_nwinfo.return_value = [MockedVIFInfo(self.vifuuid, self.srvuuid)]
         conf = {'banned_nets': self.pubuuid,
-                'networks_max': '2'}
+                'networks_max': '2', 'enabled': 'true'}
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(2, result.check_config.networks_max)
         self.assertEqual(1, len(result.check_config.banned_networks))
@@ -323,7 +323,7 @@ class TestNetworkCountCheck(test_base.TestBase):
     def test_boot_at_least_one_network(self):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
-        conf = {'networks_min': '1'}
+        conf = {'networks_min': '1', 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -340,7 +340,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
         conf = {'networks_min': '0', 'networks_max': '2',
-                'required_nets': self.pubuuid}
+                'required_nets': self.pubuuid, 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(0, result.check_config.networks_min)
@@ -355,7 +355,7 @@ class TestNetworkCountCheck(test_base.TestBase):
     def test_boot_suports_no_networks(self):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
-        conf = {'networks_min': '0'}
+        conf = {'networks_min': '0', 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(0, result.check_config.networks_min)
@@ -370,7 +370,7 @@ class TestNetworkCountCheck(test_base.TestBase):
     def test_boot_beyond_max_networks(self):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
-        conf = {'networks_min': '1', 'networks_max': '1'}
+        conf = {'networks_min': '1', 'networks_max': '1', 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -388,7 +388,7 @@ class TestNetworkCountCheck(test_base.TestBase):
     def test_boot_less_than_min_networks(self):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
-        conf = {'networks_min': '1', 'networks_max': '2'}
+        conf = {'networks_min': '1', 'networks_max': '2', 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -404,7 +404,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
         conf = {'networks_min': '1', 'networks_max': '1',
-                'optional_nets': self.pubuuid}
+                'optional_nets': self.pubuuid, 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -422,7 +422,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
         conf = {'networks_min': '1', 'networks_max': '2',
-                'banned_nets': self.pubuuid}
+                'banned_nets': self.pubuuid, 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -441,7 +441,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
         conf = {'networks_min': '1', 'networks_max': '2',
-                'required_nets': self.pubuuid}
+                'required_nets': self.pubuuid, 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
@@ -460,7 +460,7 @@ class TestNetworkCountCheck(test_base.TestBase):
         m_ctx = self.create_patch(self.ctx_path)
         m_ctx.return_value = self.context
         conf = {'networks_min': '1', 'networks_max': '1',
-                'optional_nets': self.pubuuid}
+                'optional_nets': self.pubuuid, 'enabled': 'true'}
 
         result = network_count_check.filter_factory(conf)(self.app)
         self.assertEqual(1, result.check_config.networks_min)
