@@ -5,50 +5,6 @@ Networking Filters
 Filters for Networking
 ----------------------
 
-Request Networks
-~~~~~~~~~~~~~~~~
-
-The Request Networks middleware will analyze the body of a "create server"
-request to nova (POST) and search for network UUIDs. This middleware will not
-execute for any other request. If a network UUID that is listed in the
-required_nets configuration (in the paste.ini) is missing from the request body
-this middleware will raise an HTTP Forbidden error. In addition to being able
-to find required networks, the Request Networks middleware can locate
-blacklisted networks and will raise an HTTP Forbidden error if the networks are
-present in the request.
-
-Request Networks Configuration and Definitions
-``````````````````````````````````````````````
-    Network
-        a UUID of a network that is required to be present or missing in the
-        body of a "create server" request
-
-The following sample paste.ini will be used during the explanation of
-configuration (line-numbers on the left for clarity):
-
-Request Networks consumption::
-
-    1  route_managed = requestnetworks osapi_compute_app_v2
-
-Request Networks setup::
-
-    1  [filter:requestnetworks]
-    2  paste.filter_factory = wafflehaus.requestnetworks:RequestNetworks.factory
-    3  required_nets = 00000000-0000-0000-0000-000000000000
-    4                  11111111-1111-1111-1111-111111111111
-    5  banned_nets = 22222222-2222-2222-2222-222222222222
-    6                33333333-3333-3333-3333-333333333333
-
-* The section header on line 1 is required by paste and defines the label that
-  will be used when referencing the Request Networks middleware.
-* The use setting on line 2 will select the package and function to use when
-  the WSGI stack reaches this point. This line is required by paste.
-* The required_nets settings on lines 3 and 4 is a list of required UUIDs to
-  look for
-* The banned_nets settings on lines 5 and 6 is a list of required UUIDs to
-  block
-* The UUIDs are just examples.
-
 Detach Network Check
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -83,6 +39,13 @@ Detach Network Check setup::
   the WSGI stack reaches this point. This line is required by paste.
 * The required_nets settings on lines 3 is the UUID of the network that cannot
   be detached
+
+Use Case
+````````
+Detach network check would be used in a situation where you want to ensure that
+a user may not remoe a network from their instance. You would do this if your
+deployment makes assumptions on what networks are available: ensuring that a
+connection always exists to provide support to instances.
 
 Network Count Check
 ~~~~~~~~~~~~~~~~~~~
@@ -150,3 +113,10 @@ Network Count Check setup::
   a maximum of 1 isolated network configured, a request with two networks would
   pass if one of them was network X (and count_optional_nets was set to False).
   Optional setting, defaults to False. 
+
+Use Case
+````````
+
+The network count middleware would when your deployment would like to make
+assumptions of what networks will always, or never, be attached to a new
+instance. This allows for reliable external scripting.
