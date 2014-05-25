@@ -32,6 +32,7 @@ Detach Network Check setup::
     1  [filter:detachcheck]
     2  paste.filter_factory = wafflehaus.detach_network_check:DetachNetworkCheck.factory
     3  required_nets = 11111111-1111-1111-1111-111111111111
+    4  enabled = true
 
 * The section header on line 1 is required by paste and defines the label that
   will be used when referencing the Request Networks middleware.
@@ -92,6 +93,7 @@ Network Count Check setup::
     9  networks_min  = 1
     10 networks_max  = 5
     11 count_optional_nets = False
+    12 enabled = true
 
 * The section header on line 1 is required by paste and defines the label that
   will be used when referencing the Network Count Check middleware.
