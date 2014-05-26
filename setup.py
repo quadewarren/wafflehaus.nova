@@ -16,24 +16,24 @@
 #    under the License.
 import setuptools
 
-version = '0.1'
+version = '0.1.0'
 
 setuptools.setup(
     name='wafflehaus.nova',
     version=version,
     description="A collection of middleware for openstack nova",
     classifiers=[
-      "Development Status :: 5 - Production/Stable",
-      "Environment :: Web Environment",
-      "Framework :: Paste",
-      "Intended Audience :: Developers",
-      "Intended Audience :: System Administrators",
-      "License :: OSI Approved :: Apache Software License",
-      "Operating System :: OS Independent",
-      "Programming Language :: Python :: 2.7",
-      "Programming Language :: Python :: 2.6",
-      "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware"
-    ], 
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Web Environment",
+        "Framework :: Paste",
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 2.6",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Middleware"
+    ],
     keywords=['openstack'],
     author='Justin Hammond',
     author_email='justin.hammond@rackspace.com',
@@ -43,8 +43,7 @@ setuptools.setup(
     long_description=open('README.md').read(),
     zip_safe=False,
     install_requires=[
-      "webob",
-      "dnspython",
+        "webob",
     ],
     namespace_packages=['wafflehaus'],
 )
