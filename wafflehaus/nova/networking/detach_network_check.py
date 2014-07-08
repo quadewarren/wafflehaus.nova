@@ -32,9 +32,7 @@ def _translate_vif_summary_view(_context, vif):
 
 
 class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
-    """DetachNetworkCheck middleware ensures certain networks are not
-    detached.
-    """
+    """This waffle ensures certain networks are not detached."""
 
     def __init__(self, app, conf):
         super(DetachNetworkCheck, self).__init__(app, conf)
@@ -47,7 +45,7 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
         self.xml_deserializer = servers.CreateDeserializer()
 
     def _get_network_info(self, context, server_id, entity_maker):
-        """Returns a list of VIFs, transformed through entity_maker"""
+        """Returns a list of VIFs, transformed through entity_maker."""
         instance = self._get_instance(context, server_id)
         nw_info = compute_utils.get_nw_info_for_instance(instance)
         vifs = []
@@ -66,7 +64,7 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
         if not self.enabled:
             return self.app
 
-#TODO(jlh): eventually we will need to make this a wafflehaus supported fx
+# TODO(jlh): eventually we will need to make this a wafflehaus supported fx
         verb = req.method
         if verb != "DELETE":
             return self.app
@@ -76,7 +74,7 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
             return self.app
         projectid = context.project_id
 
-#TODO(jlh): shouldn't be using PATH_INFO, but PATH instead
+# TODO(jlh): shouldn't be using PATH_INFO, but PATH instead
         path = req.environ.get("PATH_INFO")
         if path is None:
             return self.app
@@ -94,9 +92,9 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
         if (not uuidutils.is_uuid_like(server_uuid) or
                 not uuidutils.is_uuid_like(vif_uuid)):
             return self.app
-#TODO(jlh): Everything above ^^ is what needs to be one line
+# TODO(jlh): Everything above ^^ is what needs to be one line
 
-        #at this point we know it is the correct call
+        # at this point we know it is the correct call
         ent_maker = _translate_vif_summary_view
         network_info = self._get_network_info(context, server_uuid,
                                               entity_maker=ent_maker)

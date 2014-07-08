@@ -3,11 +3,8 @@ distribute>=0.6.24
 mock
 coverage
 discover
-pep8==1.4.5
-flake8==2.0
 nose
 unittest2
 hacking
-pyflakes>=0.7.2,<0.7.4
 -e git+https://github.com/openstack/nova.git#egg=nova
 -e git+https://github.com/roaet/wafflehaus.git#egg=wafflehaus

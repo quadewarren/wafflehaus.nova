@@ -93,8 +93,8 @@ class NetworkCountConfig(object):
                                      for n in self.optional_networks.split()])
         self.networks_min = int(local_config.get("networks_min", "1"))
         self.networks_max = int(local_config.get("networks_max", "1"))
-        self.count_optional_nets =\
-            bool(local_config.get("count_optional_nets", False))
+        self.count_optional_nets = bool(local_config.get(
+            "count_optional_nets", False))
 
 
 class BootNetworkCountCheck(object):
@@ -162,9 +162,6 @@ class AttachNetworkCountCheck(object):
 
     @staticmethod
     def _is_attach_network_request(pathparts, projectid):
-        """Determines if this is a network attach request based
-        on request URL
-        """
         if (len(pathparts) != 4 or
                 pathparts[0] != projectid or
                 pathparts[1] != "servers" or
@@ -216,10 +213,6 @@ class AttachNetworkCountCheck(object):
 
 
 class NetworkCountCheck(net_base.WafflehausNovaNetworking):
-    """NetworkCountCheck middleware ensures certain networks are not
-    attached and that a the network count doesn't exceed a maximum
-    """
-
     def __init__(self, app, conf):
         super(NetworkCountCheck, self).__init__(app, conf)
         self.log.name = conf.get('log_name', __name__)
@@ -246,13 +239,13 @@ class NetworkCountCheck(net_base.WafflehausNovaNetworking):
 
         pathparts = [part for part in path.split("/") if part]
         msg = ""
-        if AttachNetworkCountCheck.\
-                _is_attach_network_request(pathparts, projectid):
+        if AttachNetworkCountCheck._is_attach_network_request(pathparts,
+                                                              projectid):
             check = AttachNetworkCountCheck(self.check_config, self.log,
                                             self._get_instance)
             msg = check.check_networks(context, req, pathparts[2])
-        elif BootNetworkCountCheck.\
-                _is_server_boot_request(pathparts, req, projectid):
+        elif BootNetworkCountCheck._is_server_boot_request(pathparts, req,
+                                                           projectid):
             check = BootNetworkCountCheck(self.check_config, self.log)
             msg = check.check_networks(req)
         if msg:
