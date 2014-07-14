@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import mock
-from mock import patch
-from tests import test_base
 import webob.exc
 
 from wafflehaus.nova.networking import network_count_check
+from wafflehaus import tests
 
 
 class MockedVIFInfo(dict):
@@ -36,13 +35,7 @@ class FakeContext(object):
         self.project_id = project
 
 
-class TestNetworkCountCheck(test_base.TestBase):
-
-    def create_patch(self, name, func=None):
-        patcher = patch(name)
-        thing = patcher.start()
-        self.addCleanup(patcher.stop)
-        return thing
+class TestNetworkCountCheck(tests.TestCase):
 
     def setUp(self):
         self.app = mock.Mock()
@@ -470,3 +463,30 @@ class TestNetworkCountCheck(test_base.TestBase):
         resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
                                        body=body)
         self.assertEqual(self.app, resp)
+
+    def test_runtime_overrides(self):
+        self.set_reconfigure()
+        headers = {'X_WAFFLEHAUS_NETWORKCOUNTCHECK_ENABLED': False}
+
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '1', 'networks_max': '2',
+                'required_nets': self.pubuuid, 'enabled': 'true'}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(1, result.check_config.networks_min)
+
+        net1 = '{"uuid": "%s"}' % self.srvuuid
+        net2 = '{"uuid": "%s"}' % self.adduuid
+        body = '{"server": {"networks":[%s, %s]}}' % (net1, net2)
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
+        self.assertTrue(isinstance(resp, webob.exc.HTTPForbidden))
+        self.assertTrue('but missing' in str(resp))
+
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body, headers=headers)
+        self.assertFalse(isinstance(resp, webob.exc.HTTPForbidden))
+        self.assertFalse('but missing' in str(resp))

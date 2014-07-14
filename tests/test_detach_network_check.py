@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import mock
-from mock import patch
-from tests import test_base
 import webob.exc
 
 from wafflehaus.nova.networking import detach_network_check
+from wafflehaus import tests
 
 
 class FakeContext(object):
@@ -34,13 +33,7 @@ class MockedVIFInfo(dict):
         return [{'address': '192.168.1.1'}]
 
 
-class TestDetachNetworkCheck(test_base.TestBase):
-
-    def create_patch(self, name, func=None):
-        patcher = patch(name)
-        thing = patcher.start()
-        self.addCleanup(patcher.stop)
-        return thing
+class TestDetachNetworkCheck(tests.TestCase):
 
     def setUp(self):
         self.app = mock.Mock()
@@ -229,3 +222,40 @@ class TestDetachNetworkCheck(test_base.TestBase):
         self.assertEqual(1, self.m_get_context.call_count)
         self.assertEqual(0, self.m_get_instance.call_count)
         self.assertEqual(self.app, resp)
+
+    def test_runtime_overrides(self):
+        self.set_reconfigure()
+        headers = {'X_WAFFLEHAUS_DETACHNETWORKCHECK_ENABLED': False}
+
+        m_get_nwinfo = self.create_patch(
+            'nova.compute.utils.get_nw_info_for_instance')
+        m_get_nwinfo.return_value = self.empty_nw
+
+        result = detach_network_check.filter_factory(self.conf)(self.app)
+        result.__call__.request(self.good_url, method='POST')
+        self.assertEqual(0, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='PUT')
+        self.assertEqual(0, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='GET')
+        self.assertEqual(0, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='DELETE')
+        self.assertEqual(1, self.m_get_context.call_count)
+
+        # This waffle needs to be recreated due to the way that it stores the
+        # values that we are testing.
+        result = detach_network_check.filter_factory(self.conf)(self.app)
+        result.__call__.request(self.good_url, method='POST', headers=headers)
+        self.assertEqual(1, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='PUT', headers=headers)
+        self.assertEqual(1, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='GET', headers=headers)
+        self.assertEqual(1, self.m_get_context.call_count)
+        self.assertEqual(self.app, result.app)
+        result.__call__.request(self.good_url, method='DELETE',
+                                headers=headers)
+        self.assertEqual(1, self.m_get_context.call_count)
