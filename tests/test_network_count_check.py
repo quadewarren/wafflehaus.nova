@@ -343,7 +343,7 @@ class TestNetworkCountCheck(tests.TestCase):
         goodurl = '/%s/servers'
         resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
                                        body=body)
-        self.assertEqual(self.app, resp)
+        self.assertTrue(isinstance(resp, webob.exc.HTTPForbidden))
 
     def test_boot_suports_no_networks(self):
         m_ctx = self.create_patch(self.ctx_path)
