@@ -128,7 +128,7 @@ class BootNetworkCountCheck(object):
         networks = self._get_networks(_get_body(req, "server",
                                                 self.xml_deserializer))
         if networks is None:
-            return None
+            return set()
         if not networks:
             return set()
         return set(networks)
@@ -137,8 +137,6 @@ class BootNetworkCountCheck(object):
         """Checks required/banned/count of networks."""
         cfg = self.check_config
         networks = self._get_networks_from_request(req)
-        if networks is None:
-            return ""
 
         msg = check_required_networks(networks, cfg.required_networks)
         if msg:
