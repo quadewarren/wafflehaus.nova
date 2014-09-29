@@ -343,7 +343,57 @@ class TestNetworkCountCheck(tests.TestCase):
         goodurl = '/%s/servers'
         resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
                                        body=body)
+        self.assertEqual(self.app, resp)
+
+    def test_boot_suports_no_network_in_body_with_strict_boot_check_on(self):
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '0', 'networks_max': '2',
+                'required_nets': self.pubuuid, 'enabled': 'true',
+                'strict_boot_check': 'true'}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(0, result.check_config.networks_min)
+
+        body = '{"server": {}}'
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
         self.assertTrue(isinstance(resp, webob.exc.HTTPForbidden))
+
+    def test_boot_suports_no_network_in_body_with_strict_boot_check_off(self):
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '0', 'networks_max': '2',
+                'required_nets': self.pubuuid, 'enabled': 'true',
+                'strict_boot_check': ''}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(0, result.check_config.networks_min)
+
+        body = '{"server": {}}'
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
+        self.assertEqual(self.app, resp)
+
+    def test_boot_suports_no_network_in_body_without_strict_boot_check(self):
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '0', 'networks_max': '2',
+                'required_nets': self.pubuuid, 'enabled': 'true'}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(0, result.check_config.networks_min)
+
+        body = '{"server": {}}'
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
+        self.assertEqual(self.app, resp)
 
     def test_boot_suports_no_networks(self):
         m_ctx = self.create_patch(self.ctx_path)

@@ -95,6 +95,8 @@ class NetworkCountConfig(object):
         self.networks_max = int(local_config.get("networks_max", "1"))
         self.count_optional_nets = bool(local_config.get(
             "count_optional_nets", False))
+        self.strict_boot_check = bool(local_config.get(
+            "strict_boot_check", False))
 
 
 class BootNetworkCountCheck(object):
@@ -128,7 +130,7 @@ class BootNetworkCountCheck(object):
         networks = self._get_networks(_get_body(req, "server",
                                                 self.xml_deserializer))
         if networks is None:
-            return set()
+            return None
         if not networks:
             return set()
         return set(networks)
@@ -137,6 +139,12 @@ class BootNetworkCountCheck(object):
         """Checks required/banned/count of networks."""
         cfg = self.check_config
         networks = self._get_networks_from_request(req)
+
+        if cfg.strict_boot_check and networks is None:
+            networks = set()
+
+        if networks is None:
+            return ""
 
         msg = check_required_networks(networks, cfg.required_networks)
         if msg:
