@@ -17,9 +17,10 @@ from webob import exc
 
 from wafflehaus.nova.networking import networking_base as net_base
 
+from oslo.serialization import jsonutils
+
 from nova.api.openstack.compute import servers
 from nova.compute import utils as compute_utils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
 
 
