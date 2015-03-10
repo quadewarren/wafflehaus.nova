@@ -15,11 +15,11 @@
 import webob.dec
 import webob.exc
 
+from oslo_utils import uuidutils
 from wafflehaus.nova.networking import networking_base as net_base
 
 from nova.api.openstack.compute import servers
 from nova.compute import utils as compute_utils
-from nova.openstack.common import uuidutils
 
 
 def _translate_vif_summary_view(_context, vif):

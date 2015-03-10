@@ -18,10 +18,10 @@ from webob import exc
 from wafflehaus.nova.networking import networking_base as net_base
 
 from oslo.serialization import jsonutils
+from oslo_utils import uuidutils
 
 from nova.api.openstack.compute import servers
 from nova.compute import utils as compute_utils
-from nova.openstack.common import uuidutils
 
 
 def _get_body(request, json_property, xml_deserializer):
