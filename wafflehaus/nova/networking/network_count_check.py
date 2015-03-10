@@ -20,17 +20,13 @@ from wafflehaus.nova.networking import networking_base as net_base
 from oslo.serialization import jsonutils
 from oslo_utils import uuidutils
 
-from nova.api.openstack.compute import servers
 from nova.compute import utils as compute_utils
 
 
-def _get_body(request, json_property, xml_deserializer):
-    """Returns body serialized from JSON/XML."""
-    if request.content_type and "xml" in request.content_type:
-        body = xml_deserializer.default(request.body)
-    else:
-        body = jsonutils.loads(request.body)
-        body = body[json_property]
+def _get_body(request, json_property):
+    """Returns body serialized from JSON."""
+    body = jsonutils.loads(request.body)
+    body = body[json_property]
     return body
 
 
@@ -104,7 +100,6 @@ class BootNetworkCountCheck(object):
     """Verifies networks on server boot."""
     def __init__(self, check_config, log):
         self.check_config = check_config
-        self.xml_deserializer = servers.CreateDeserializer()
         self.log = log
 
     @staticmethod
@@ -128,8 +123,7 @@ class BootNetworkCountCheck(object):
 
     def _get_networks_from_request(self, req):
         """Returns networks given in server boot request."""
-        networks = self._get_networks(_get_body(req, "server",
-                                                self.xml_deserializer))
+        networks = self._get_networks(_get_body(req, "server"))
         if networks is None:
             return None
         if not networks:
@@ -163,7 +157,6 @@ class AttachNetworkCountCheck(object):
     """Verifies networks on network/vif attach request."""
     def __init__(self, check_config, log, get_instance):
         self.check_config = check_config
-        self.xml_deserializer = servers.CreateDeserializer()
         self.log = log
         self.get_instance = get_instance
 
@@ -194,7 +187,7 @@ class AttachNetworkCountCheck(object):
         """Extract network to be added from request."""
         if not request.body or len(request.body) == 0:
             return None
-        body = _get_body(request, "virtual_interface", self.xml_deserializer)
+        body = _get_body(request, "virtual_interface")
         if not body or 'network_id' not in body:
             return None
         return body['network_id']

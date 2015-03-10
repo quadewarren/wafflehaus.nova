@@ -18,7 +18,6 @@ import webob.exc
 from oslo_utils import uuidutils
 from wafflehaus.nova.networking import networking_base as net_base
 
-from nova.api.openstack.compute import servers
 from nova.compute import utils as compute_utils
 
 
@@ -42,7 +41,6 @@ class DetachNetworkCheck(net_base.WafflehausNovaNetworking):
         self.required_networks = conf.get('required_nets', '')
         self.required_networks = [n.strip()
                                   for n in self.required_networks.split()]
-        self.xml_deserializer = servers.CreateDeserializer()
 
     def _get_network_info(self, context, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker."""
