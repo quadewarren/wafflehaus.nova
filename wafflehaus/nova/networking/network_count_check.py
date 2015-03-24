@@ -119,7 +119,7 @@ class BootNetworkCountCheck(object):
         networks = body.get("networks")
         if networks is None:
             return None
-        return [n["uuid"] for n in networks]
+        return [n["uuid"] for n in networks if "uuid" in n]
 
     def _get_networks_from_request(self, req):
         """Returns networks given in server boot request."""
