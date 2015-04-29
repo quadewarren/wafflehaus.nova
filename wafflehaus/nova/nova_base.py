@@ -35,5 +35,5 @@ class WafflehausNova(WafflehausBase):
     def _get_instance(self, context, server_id):
         """Mock target for testing."""
         compute_api = self.compute.API()
-        instance = compute_api.get(context, server_id)
+        instance = compute_api.get(context, server_id, want_objects=True)
         return instance
