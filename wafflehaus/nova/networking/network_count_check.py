@@ -17,7 +17,7 @@ from webob import exc
 
 from wafflehaus.nova.networking import networking_base as net_base
 
-from oslo.serialization import jsonutils
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from nova.compute import utils as compute_utils
