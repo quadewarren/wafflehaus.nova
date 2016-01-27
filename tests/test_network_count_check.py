@@ -540,3 +540,18 @@ class TestNetworkCountCheck(tests.TestCase):
                                        body=body, headers=headers)
         self.assertFalse(isinstance(resp, webob.exc.HTTPForbidden))
         self.assertFalse('but missing' in str(resp))
+
+    def test_boot_suports_port(self):
+        m_ctx = self.create_patch(self.ctx_path)
+        m_ctx.return_value = self.context
+        conf = {'networks_min': '0', 'enabled': 'true'}
+
+        result = network_count_check.filter_factory(conf)(self.app)
+        self.assertEqual(0, result.check_config.networks_min)
+
+        body = '{"server": {"networks":[{"port": "fake-port"}]}}'
+
+        goodurl = '/%s/servers'
+        resp = result.__call__.request(goodurl % self.tenant_id, method='POST',
+                                       body=body)
+        self.assertEqual(self.app, resp)
